@@ -1,67 +1,91 @@
-import { Plugin, ResolvedConfig } from "vite";
-import { ParserOptions, TransformOptions } from "@babel/core";
+declare namespace WebIDLConversions {
+    interface Globals {
+        [key: string]: unknown;
 
-//#region src/index.d.ts
-interface Options {
-  include?: string | RegExp | Array<string | RegExp>;
-  exclude?: string | RegExp | Array<string | RegExp>;
-  /**
-   * Control where the JSX factory is imported from.
-   * https://esbuild.github.io/api/#jsx-import-source
-   * @default 'react'
-   */
-  jsxImportSource?: string;
-  /**
-   * Note: Skipping React import with classic runtime is not supported from v4
-   * @default "automatic"
-   */
-  jsxRuntime?: 'classic' | 'automatic';
-  /**
-   * Babel configuration applied in both dev and prod.
-   */
-  babel?: BabelOptions | ((id: string, options: {
-    ssr?: boolean;
-  }) => BabelOptions);
-  /**
-   * React Fast Refresh runtime URL prefix.
-   * Useful in a module federation context to enable HMR by specifying
-   * the host application URL in the Vite config of a remote application.
-   * @example
-   * reactRefreshHost: 'http://localhost:3000'
-   */
-  reactRefreshHost?: string;
-  /**
-   * If set, disables the recommendation to use `@vitejs/plugin-react-oxc`
-   */
-  disableOxcRecommendation?: boolean;
+        Number: (value?: unknown) => number;
+        String: (value?: unknown) => string;
+        TypeError: new(message?: string) => TypeError;
+    }
+
+    interface Options {
+        context?: string | undefined;
+        globals?: Globals | undefined;
+    }
+
+    interface IntegerOptions extends Options {
+        enforceRange?: boolean | undefined;
+        clamp?: boolean | undefined;
+    }
+
+    interface StringOptions extends Options {
+        treatNullAsEmptyString?: boolean | undefined;
+    }
+
+    interface BufferSourceOptions extends Options {
+        allowShared?: boolean | undefined;
+    }
+
+    type IntegerConversion = (V: unknown, opts?: IntegerOptions) => number;
+    type StringConversion = (V: unknown, opts?: StringOptions) => string;
+    type NumberConversion = (V: unknown, opts?: Options) => number;
 }
-type BabelOptions = Omit<TransformOptions, 'ast' | 'filename' | 'root' | 'sourceFileName' | 'sourceMaps' | 'inputSourceMap'>;
-/**
- * The object type used by the `options` passed to plugins with
- * an `api.reactBabel` method.
- */
-interface ReactBabelOptions extends BabelOptions {
-  plugins: Extract<BabelOptions['plugins'], any[]>;
-  presets: Extract<BabelOptions['presets'], any[]>;
-  overrides: Extract<BabelOptions['overrides'], any[]>;
-  parserOpts: ParserOptions & {
-    plugins: Extract<ParserOptions['plugins'], any[]>;
-  };
-}
-type ReactBabelHook = (babelConfig: ReactBabelOptions, context: ReactBabelHookContext, config: ResolvedConfig) => void;
-type ReactBabelHookContext = {
-  ssr: boolean;
-  id: string;
+
+declare const WebIDLConversions: {
+    any<V>(V: V, opts?: WebIDLConversions.Options): V;
+    undefined(V?: unknown, opts?: WebIDLConversions.Options): void;
+    boolean(V: unknown, opts?: WebIDLConversions.Options): boolean;
+
+    byte(V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+    octet(V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+
+    short(V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+    ["unsigned short"](V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+
+    long(V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+    ["unsigned long"](V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+
+    ["long long"](V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+    ["unsigned long long"](V: unknown, opts?: WebIDLConversions.IntegerOptions): number;
+
+    double(V: unknown, opts?: WebIDLConversions.Options): number;
+    ["unrestricted double"](V: unknown, opts?: WebIDLConversions.Options): number;
+
+    float(V: unknown, opts?: WebIDLConversions.Options): number;
+    ["unrestricted float"](V: unknown, opts?: WebIDLConversions.Options): number;
+
+    DOMString(V: unknown, opts?: WebIDLConversions.StringOptions): string;
+    ByteString(V: unknown, opts?: WebIDLConversions.StringOptions): string;
+    USVString(V: unknown, opts?: WebIDLConversions.StringOptions): string;
+
+    object<V>(V: V, opts?: WebIDLConversions.Options): V extends object ? V : V & object;
+    ArrayBuffer(
+        V: unknown,
+        opts?: WebIDLConversions.BufferSourceOptions & { allowShared?: false | undefined },
+    ): ArrayBuffer;
+    ArrayBuffer(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): ArrayBufferLike;
+    DataView(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): DataView;
+
+    Int8Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Int8Array;
+    Int16Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Int16Array;
+    Int32Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Int32Array;
+
+    Uint8Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Uint8Array;
+    Uint16Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Uint16Array;
+    Uint32Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Uint32Array;
+    Uint8ClampedArray(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Uint8ClampedArray;
+
+    Float32Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Float32Array;
+    Float64Array(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): Float64Array;
+
+    ArrayBufferView(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): ArrayBufferView;
+    BufferSource(
+        V: unknown,
+        opts?: WebIDLConversions.BufferSourceOptions & { allowShared?: false | undefined },
+    ): ArrayBuffer | ArrayBufferView;
+    BufferSource(V: unknown, opts?: WebIDLConversions.BufferSourceOptions): ArrayBufferLike | ArrayBufferView;
+
+    DOMTimeStamp(V: unknown, opts?: WebIDLConversions.Options): number;
 };
-type ViteReactPluginApi = {
-  /**
-   * Manipulate the Babel options of `@vitejs/plugin-react`
-   */
-  reactBabel?: ReactBabelHook;
-};
-declare function viteReact(opts?: Options): Plugin[];
-declare namespace viteReact {
-  var preambleCode: string;
-}
-//#endregion
-export { BabelOptions, Options, ReactBabelOptions, ViteReactPluginApi, viteReact as default };
+
+// This can't use ES6 style exports, as those can't have spaces in export names.
+export = WebIDLConversions;
